@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "relay": "npx tsx --env-file=.env.local relay/src/index.ts"
+    "relay": "npx tsx --env-file=.env.local relay/src/index.ts",
+    "setup": "npx tsx relay/src/cli.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.42",

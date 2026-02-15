@@ -1,17 +1,8 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 const POLL_INTERVAL = 3000;
-
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-if (!convexUrl) {
-  console.error("NEXT_PUBLIC_CONVEX_URL 환경변수가 필요합니다.");
-  process.exit(1);
-}
-
-const convex = new ConvexHttpClient(convexUrl);
 
 // 세션별 Agent SDK session ID 캐시
 const sessionMap = new Map<string, string>();
@@ -30,9 +21,7 @@ function formatToolUse(name: string, input: unknown): string {
       }>;
     };
     if (q.questions) {
-      // 질문 데이터를 JSON으로 저장 (UI에서 버튼 렌더링용)
       pendingQuestionData = JSON.stringify(q.questions);
-
       let text = "";
       for (const question of q.questions) {
         text += `\n${question.question}\n`;
@@ -41,7 +30,6 @@ function formatToolUse(name: string, input: unknown): string {
     }
   }
 
-  // 도구 호출을 마커로 감싸서 UI에서 접을 수 있게
   const summary = (() => {
     const inp = input as Record<string, unknown>;
     if (name === "Bash") return inp.command ? String(inp.command).slice(0, 80) : "";
@@ -55,7 +43,7 @@ function formatToolUse(name: string, input: unknown): string {
   return `\n<!--tool:${name}:${summary}-->\n`;
 }
 
-async function poll() {
+async function poll(convex: ConvexHttpClient) {
   if (isProcessing) return;
 
   try {
@@ -131,7 +119,6 @@ async function poll() {
         }
       }
 
-      // 완료
       await convex.mutation(api.messages.updateContent, {
         messageId: assistantMsgId,
         content: fullText || "(응답 없음)",
@@ -169,9 +156,21 @@ async function poll() {
   }
 }
 
-console.log("[relay] Claude Code Relay 시작...");
-console.log(`[relay] Convex: ${convexUrl}`);
-console.log(`[relay] ${POLL_INTERVAL / 1000}초마다 새 메시지 확인`);
+export function startRelay(convexUrl: string) {
+  const convex = new ConvexHttpClient(convexUrl);
 
-setInterval(poll, POLL_INTERVAL);
-poll();
+  console.log("[relay] Claude Code Relay 시작...");
+  console.log(`[relay] Convex: ${convexUrl}`);
+  console.log(`[relay] ${POLL_INTERVAL / 1000}초마다 새 메시지 확인\n`);
+
+  const interval = setInterval(() => poll(convex), POLL_INTERVAL);
+  poll(convex);
+
+  return () => clearInterval(interval);
+}
+
+// 직접 실행 시
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+if (convexUrl) {
+  startRelay(convexUrl);
+}
