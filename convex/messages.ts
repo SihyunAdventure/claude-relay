@@ -86,10 +86,12 @@ export const updateContent = mutation({
         v.literal("error")
       )
     ),
+    questionData: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const patch: Record<string, unknown> = { content: args.content };
     if (args.status) patch.status = args.status;
+    if (args.questionData) patch.questionData = args.questionData;
     await ctx.db.patch(args.messageId, patch);
   },
 });

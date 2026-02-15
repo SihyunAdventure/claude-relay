@@ -85,7 +85,14 @@ export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
         ) : (
           <div className="space-y-4">
             {messages.map((msg) => (
-              <MessageBubble key={msg._id} message={msg} />
+              <MessageBubble
+                key={msg._id}
+                message={msg}
+                onSelectOption={async (label) => {
+                  await sendMessage({ sessionId, content: label });
+                  inputRef.current?.focus();
+                }}
+              />
             ))}
           </div>
         )}
@@ -135,15 +142,32 @@ export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
 
 function MessageBubble({
   message,
+  onSelectOption,
 }: {
   message: {
     role: string;
     content: string;
     status: string;
     timestamp: number;
+    questionData?: string;
   };
+  onSelectOption?: (label: string) => void;
 }) {
   const isUser = message.role === "user";
+
+  // questionData 파싱
+  const questions = message.questionData
+    ? (() => {
+        try {
+          return JSON.parse(message.questionData) as Array<{
+            question: string;
+            options?: Array<{ label: string; description?: string }>;
+          }>;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -157,6 +181,33 @@ function MessageBubble({
         <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
           {message.content || (message.status === "streaming" ? "..." : "")}
         </p>
+
+        {/* 선택 옵션 버튼 */}
+        {questions && (
+          <div className="mt-3 space-y-2">
+            {questions.map((q) =>
+              q.options?.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => onSelectOption?.(opt.label)}
+                  className="flex w-full items-start gap-2 rounded-lg border border-zinc-600 bg-zinc-700/50 px-3 py-2 text-left text-sm transition-colors hover:border-blue-500 hover:bg-zinc-700"
+                >
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <span className="font-medium">{opt.label}</span>
+                    {opt.description && (
+                      <span className="ml-1 text-zinc-400">
+                        — {opt.description}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
         <div className="mt-1 flex items-center gap-2">
           <span className="text-[10px] opacity-50">
             {new Date(message.timestamp).toLocaleTimeString("ko-KR", {

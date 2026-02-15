@@ -29,6 +29,8 @@ export default defineSchema({
       v.literal("complete"),  // done
       v.literal("error")     // failed
     ),
+    // AskUserQuestion 메타데이터 (JSON string)
+    questionData: v.optional(v.string()),
     timestamp: v.number(),
   })
     .index("by_session", ["sessionId", "timestamp"])

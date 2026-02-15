@@ -18,8 +18,10 @@ const sessionMap = new Map<string, string>();
 
 let isProcessing = false;
 
+// AskUserQuestion 데이터를 캡처
+let pendingQuestionData: string | null = null;
+
 function formatToolUse(name: string, input: unknown): string {
-  // AskUserQuestion은 질문 형태로 포맷
   if (name === "AskUserQuestion") {
     const q = input as {
       questions?: Array<{
@@ -28,17 +30,12 @@ function formatToolUse(name: string, input: unknown): string {
       }>;
     };
     if (q.questions) {
+      // 질문 데이터를 JSON으로 저장 (UI에서 버튼 렌더링용)
+      pendingQuestionData = JSON.stringify(q.questions);
+
       let text = "";
       for (const question of q.questions) {
-        text += `\n**${question.question}**\n\n`;
-        if (question.options) {
-          question.options.forEach((opt, i) => {
-            text += `${i + 1}. **${opt.label}**`;
-            if (opt.description) text += ` — ${opt.description}`;
-            text += "\n";
-          });
-        }
-        text += "\n답변을 입력해주세요.\n";
+        text += `\n${question.question}\n`;
       }
       return text;
     }
@@ -83,6 +80,7 @@ async function poll() {
 
     try {
       let fullText = "";
+      pendingQuestionData = null;
 
       const response = query({
         prompt: pending.content,
@@ -129,6 +127,7 @@ async function poll() {
         messageId: assistantMsgId,
         content: fullText || "(응답 없음)",
         status: "complete",
+        ...(pendingQuestionData ? { questionData: pendingQuestionData } : {}),
       });
       await convex.mutation(api.messages.updateStatus, {
         messageId: pending._id,
