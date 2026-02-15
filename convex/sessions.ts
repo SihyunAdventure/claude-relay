@@ -8,7 +8,31 @@ export const list = query({
       .query("sessions")
       .order("desc")
       .take(50);
-    return all.filter((s) => !s.archived);
+    const active = all.filter((s) => !s.archived);
+
+    // 각 세션의 마지막 메시지와 메시지 수 가져오기
+    return await Promise.all(
+      active.map(async (session) => {
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+          .order("desc")
+          .take(1);
+        const lastMessage = messages[0];
+        const allMessages = await ctx.db
+          .query("messages")
+          .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+          .collect();
+        return {
+          ...session,
+          lastMessagePreview: lastMessage
+            ? lastMessage.content.replace(/<!--.*?-->/g, "").trim().slice(0, 80)
+            : null,
+          lastMessageRole: lastMessage?.role ?? null,
+          messageCount: allMessages.length,
+        };
+      })
+    );
   },
 });
 
@@ -34,6 +58,7 @@ export const create = mutation({
   args: {
     workingDir: v.string(),
     title: v.optional(v.string()),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -41,6 +66,7 @@ export const create = mutation({
       status: "idle",
       workingDir: args.workingDir,
       title: args.title,
+      model: args.model,
       createdAt: now,
       lastActiveAt: now,
     });
@@ -73,6 +99,16 @@ export const setAgentSessionId = mutation({
     await ctx.db.patch(args.sessionId, {
       agentSessionId: args.agentSessionId,
     });
+  },
+});
+
+export const updateModel = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    model: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { model: args.model });
   },
 });
 

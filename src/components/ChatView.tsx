@@ -7,12 +7,24 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Markdown from "react-markdown";
 
+const MODELS = [
+  { id: "claude-opus-4-6", label: "Opus 4.6" },
+  { id: "claude-sonnet-4-5-20250929", label: "Sonnet 4.5" },
+  { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5" },
+];
+
+const MODEL_LABELS: Record<string, string> = Object.fromEntries(
+  MODELS.map((m) => [m.id, m.label])
+);
+
 export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
   const session = useQuery(api.sessions.get, { sessionId });
   const messages = useQuery(api.messages.list, { sessionId });
   const sendMessage = useMutation(api.messages.send);
   const cancelStreaming = useMutation(api.messages.cancelStreaming);
+  const updateModel = useMutation(api.sessions.updateModel);
   const [input, setInput] = useState("");
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -72,6 +84,37 @@ export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
             {session?.title || "세션"}
           </p>
         </div>
+        {/* 모델 선택 */}
+        {session && (
+          <div className="relative">
+            <button
+              onClick={() => setShowModelPicker(!showModelPicker)}
+              className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-[11px] text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-300"
+            >
+              {MODEL_LABELS[session.model || "claude-sonnet-4-5-20250929"] || "Sonnet 4.5"}
+            </button>
+            {showModelPicker && (
+              <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-xl">
+                {MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={async () => {
+                      await updateModel({ sessionId, model: m.id });
+                      setShowModelPicker(false);
+                    }}
+                    className={`flex w-full items-center rounded-md px-3 py-1.5 text-xs transition-colors ${
+                      (session.model || "claude-sonnet-4-5-20250929") === m.id
+                        ? "bg-blue-600/20 text-blue-400"
+                        : "text-zinc-300 hover:bg-zinc-800"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {session && <StatusBadge status={session.status} />}
       </header>
 
@@ -257,11 +300,10 @@ function MessageBubble({
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const config = {
-    active: { label: "실행 중", color: "bg-green-500/20 text-green-400" },
-    idle: { label: "대기", color: "bg-yellow-500/20 text-yellow-400" },
-    offline: { label: "오프라인", color: "bg-zinc-500/20 text-zinc-400" },
-  }[status] ?? { label: status, color: "bg-zinc-500/20 text-zinc-400" };
+  const isOnline = status === "active" || status === "idle";
+  const config = isOnline
+    ? { label: "실행 중", color: "bg-green-500/20 text-green-400" }
+    : { label: "오프라인", color: "bg-zinc-500/20 text-zinc-400" };
 
   return (
     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${config.color}`}>

@@ -9,6 +9,7 @@
  */
 
 import type * as messages from "../messages.js";
+import type * as projects from "../projects.js";
 import type * as sessions from "../sessions.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   messages: typeof messages;
+  projects: typeof projects;
   sessions: typeof sessions;
 }>;
 

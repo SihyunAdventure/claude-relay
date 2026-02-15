@@ -2,6 +2,12 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  projects: defineTable({
+    path: v.string(),
+    name: v.string(),
+    lastSeen: v.number(),
+  }).index("by_path", ["path"]),
+
   sessions: defineTable({
     status: v.union(
       v.literal("active"),
@@ -10,6 +16,7 @@ export default defineSchema({
     ),
     workingDir: v.string(),
     title: v.optional(v.string()),
+    model: v.optional(v.string()), // Claude model ID
     agentSessionId: v.optional(v.string()), // Claude Agent SDK session ID for resume
     archived: v.optional(v.boolean()),
     createdAt: v.number(),

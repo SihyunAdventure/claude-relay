@@ -1,6 +1,9 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { readdirSync, statSync, existsSync } from "fs";
+import { join, basename } from "path";
+import { homedir } from "os";
 
 const POLL_INTERVAL = 3000;
 
@@ -68,6 +71,26 @@ async function poll(convex: ConvexHttpClient) {
     });
     const cwd = session?.workingDir || process.cwd();
 
+    // 경로 유효성 검증
+    if (!existsSync(cwd)) {
+      console.error(`[relay] 경로가 존재하지 않음: ${cwd}`);
+      const errorMsgId = await convex.mutation(api.messages.addAssistant, {
+        sessionId: pending.sessionId,
+        content: `경로를 찾을 수 없습니다: \`${cwd}\`\n\n올바른 절대 경로로 새 세션을 만들어주세요.`,
+        status: "error",
+      });
+      await convex.mutation(api.messages.updateStatus, {
+        messageId: pending._id,
+        status: "error",
+      });
+      await convex.mutation(api.sessions.updateStatus, {
+        sessionId: pending.sessionId,
+        status: "idle",
+      });
+      isProcessing = false;
+      return;
+    }
+
     const agentSessionId = sessionMap.get(pending.sessionId);
     const assistantMsgId = await convex.mutation(api.messages.addAssistant, {
       sessionId: pending.sessionId,
@@ -79,10 +102,11 @@ async function poll(convex: ConvexHttpClient) {
       let fullText = "";
       pendingQuestionData = null;
 
+      const model = session?.model || "claude-sonnet-4-5-20250929";
       const response = query({
         prompt: pending.content,
         options: {
-          model: "claude-sonnet-4-5-20250929",
+          model,
           ...(agentSessionId ? { resume: agentSessionId } : {}),
           systemPrompt: { type: "preset", preset: "claude_code" },
           permissionMode: "bypassPermissions",
@@ -170,12 +194,77 @@ async function poll(convex: ConvexHttpClient) {
   }
 }
 
+function scanGitProjects(): Array<{ path: string; name: string }> {
+  const home = homedir();
+  const scanDirs = [
+    join(home, "Documents"),
+    join(home, "Projects"),
+    join(home, "Developer"),
+    join(home, "Desktop"),
+    join(home, "code"),
+    join(home, "Code"),
+    join(home, "dev"),
+    join(home, "workspace"),
+    join(home, "src"),
+  ];
+
+  const projects: Array<{ path: string; name: string }> = [];
+  const maxDepth = 3;
+
+  function walk(dir: string, depth: number) {
+    if (depth > maxDepth) return;
+    try {
+      if (existsSync(join(dir, ".git"))) {
+        projects.push({ path: dir, name: basename(dir) });
+        return; // git repo 내부는 탐색하지 않음
+      }
+      const entries = readdirSync(dir);
+      for (const entry of entries) {
+        if (entry.startsWith(".") || entry === "node_modules") continue;
+        const full = join(dir, entry);
+        try {
+          if (statSync(full).isDirectory()) {
+            walk(full, depth + 1);
+          }
+        } catch {
+          // 권한 없는 디렉터리 무시
+        }
+      }
+    } catch {
+      // 접근 불가 디렉터리 무시
+    }
+  }
+
+  for (const dir of scanDirs) {
+    if (existsSync(dir)) {
+      walk(dir, 0);
+    }
+  }
+
+  return projects;
+}
+
+async function syncProjects(convex: ConvexHttpClient) {
+  try {
+    const projects = scanGitProjects();
+    if (projects.length > 0) {
+      await convex.mutation(api.projects.sync, { projects });
+      console.log(`[relay] ${projects.length}개 프로젝트 동기화 완료`);
+    }
+  } catch (err) {
+    console.error("[relay] 프로젝트 스캔 실패:", err);
+  }
+}
+
 export function startRelay(convexUrl: string) {
   const convex = new ConvexHttpClient(convexUrl);
 
   console.log("[relay] Claude Code Relay 시작...");
   console.log(`[relay] Convex: ${convexUrl}`);
   console.log(`[relay] ${POLL_INTERVAL / 1000}초마다 새 메시지 확인\n`);
+
+  // 시작 시 로컬 git 프로젝트 스캔 & 동기화
+  syncProjects(convex);
 
   const interval = setInterval(() => poll(convex), POLL_INTERVAL);
   poll(convex);
