@@ -246,6 +246,9 @@ function MessageBubble({
           {message.status === "error" && (
             <span className="text-[10px] text-red-400">오류</span>
           )}
+          {!isUser && message.content === "(취소됨)" && (
+            <span className="text-[10px] text-yellow-400">취소됨</span>
+          )}
         </div>
       </div>
     </div>

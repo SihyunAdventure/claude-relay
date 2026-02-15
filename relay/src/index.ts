@@ -92,7 +92,19 @@ async function poll(convex: ConvexHttpClient) {
         },
       });
 
+      let cancelled = false;
+
       for await (const message of response) {
+        // 취소 감지: DB에서 메시지 상태 확인
+        const currentMsg = await convex.query(api.messages.getById, {
+          messageId: assistantMsgId,
+        });
+        if (currentMsg && currentMsg.status !== "streaming") {
+          console.log("[relay] 취소 감지됨, 중단합니다.");
+          cancelled = true;
+          break;
+        }
+
         if (message.type === "system" && message.subtype === "init") {
           const newSessionId = message.session_id;
           sessionMap.set(pending.sessionId, newSessionId);
@@ -119,12 +131,14 @@ async function poll(convex: ConvexHttpClient) {
         }
       }
 
-      await convex.mutation(api.messages.updateContent, {
-        messageId: assistantMsgId,
-        content: fullText || "(응답 없음)",
-        status: "complete",
-        ...(pendingQuestionData ? { questionData: pendingQuestionData } : {}),
-      });
+      if (!cancelled) {
+        await convex.mutation(api.messages.updateContent, {
+          messageId: assistantMsgId,
+          content: fullText || "(응답 없음)",
+          status: "complete",
+          ...(pendingQuestionData ? { questionData: pendingQuestionData } : {}),
+        });
+      }
       await convex.mutation(api.messages.updateStatus, {
         messageId: pending._id,
         status: "complete",

@@ -28,6 +28,13 @@ export const send = mutation({
   },
 });
 
+export const getById = query({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.messageId);
+  },
+});
+
 export const nextPending = query({
   args: {},
   handler: async (ctx) => {
