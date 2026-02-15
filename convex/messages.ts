@@ -75,6 +75,29 @@ export const addAssistant = mutation({
   },
 });
 
+export const cancelStreaming = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .order("desc")
+      .take(10);
+
+    for (const msg of messages) {
+      if (msg.status === "streaming") {
+        await ctx.db.patch(msg._id, {
+          status: "complete",
+          content: msg.content || "(취소됨)",
+        });
+      }
+      if (msg.status === "pending") {
+        await ctx.db.patch(msg._id, { status: "complete" });
+      }
+    }
+  },
+});
+
 export const updateContent = mutation({
   args: {
     messageId: v.id("messages"),
