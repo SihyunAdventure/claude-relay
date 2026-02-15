@@ -11,6 +11,7 @@ export default defineSchema({
     workingDir: v.string(),
     title: v.optional(v.string()),
     agentSessionId: v.optional(v.string()), // Claude Agent SDK session ID for resume
+    archived: v.optional(v.boolean()),
     createdAt: v.number(),
     lastActiveAt: v.number(),
   }).index("by_status", ["status"]),

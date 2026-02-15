@@ -23,10 +23,15 @@ function saveRecentPath(path: string) {
 
 export function SessionList() {
   const sessions = useQuery(api.sessions.list);
+  const archivedSessions = useQuery(api.sessions.listArchived);
   const createSession = useMutation(api.sessions.create);
+  const archiveSession = useMutation(api.sessions.archive);
+  const unarchiveSession = useMutation(api.sessions.unarchive);
+  const removeSession = useMutation(api.sessions.remove);
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const [workingDir, setWorkingDir] = useState("");
   const [title, setTitle] = useState("");
   const [recentPaths, setRecentPaths] = useState<string[]>([]);
@@ -135,24 +140,93 @@ export function SessionList() {
       ) : (
         <div className="space-y-2">
           {sessions.map((session) => (
-            <button
-              key={session._id}
-              onClick={() => router.push(`/session/${session._id}`)}
-              className="flex w-full items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-800"
-            >
-              <StatusDot status={session.status} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-white">
-                  {session.title || `세션`}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  {new Date(session.lastActiveAt).toLocaleString("ko-KR")}
-                </p>
-              </div>
-              <span className="text-xs text-zinc-600">{session.workingDir}</span>
-            </button>
+            <div key={session._id} className="group flex items-center gap-1">
+              <button
+                onClick={() => router.push(`/session/${session._id}`)}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-800"
+              >
+                <StatusDot status={session.status} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-white">
+                    {session.title || `세션`}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {new Date(session.lastActiveAt).toLocaleString("ko-KR")}
+                  </p>
+                </div>
+                <span className="text-xs text-zinc-600">{session.workingDir}</span>
+              </button>
+              <button
+                onClick={() => archiveSession({ sessionId: session._id })}
+                title="아카이브"
+                className="shrink-0 rounded-lg p-2 text-zinc-600 opacity-0 transition-all hover:bg-zinc-800 hover:text-zinc-400 group-hover:opacity-100"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="5" rx="1" />
+                  <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                  <path d="M10 12h4" />
+                </svg>
+              </button>
+            </div>
           ))}
         </div>
+      )}
+
+      {/* 아카이브 */}
+      {archivedSessions && archivedSessions.length > 0 && (
+        <details
+          open={showArchive}
+          onToggle={(e) => setShowArchive((e.target as HTMLDetailsElement).open)}
+          className="rounded-lg border border-zinc-800"
+        >
+          <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-zinc-500 hover:text-zinc-400">
+            아카이브 ({archivedSessions.length})
+          </summary>
+          <div className="space-y-1.5 px-2 pb-2">
+            {archivedSessions.map((session) => (
+              <div key={session._id} className="flex items-center gap-1">
+                <button
+                  onClick={() => router.push(`/session/${session._id}`)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-zinc-800/50 bg-zinc-900/50 px-4 py-3 text-left transition-colors hover:bg-zinc-800/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-zinc-400">
+                      {session.title || "세션"}
+                    </p>
+                    <p className="text-[10px] text-zinc-600">
+                      {new Date(session.lastActiveAt).toLocaleString("ko-KR")}
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => unarchiveSession({ sessionId: session._id })}
+                  title="복원"
+                  className="shrink-0 rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-800 hover:text-zinc-400"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm("정말 삭제하시겠습니까? 모든 메시지가 함께 삭제됩니다.")) {
+                      removeSession({ sessionId: session._id });
+                    }
+                  }}
+                  title="영구 삭제"
+                  className="shrink-0 rounded-lg p-2 text-zinc-600 transition-colors hover:bg-red-900/30 hover:text-red-400"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       <ResetButton />

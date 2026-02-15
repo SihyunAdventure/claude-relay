@@ -4,10 +4,22 @@ import { v } from "convex/values";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
+    const all = await ctx.db
       .query("sessions")
       .order("desc")
-      .take(20);
+      .take(50);
+    return all.filter((s) => !s.archived);
+  },
+});
+
+export const listArchived = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db
+      .query("sessions")
+      .order("desc")
+      .take(50);
+    return all.filter((s) => s.archived);
   },
 });
 
@@ -61,5 +73,34 @@ export const setAgentSessionId = mutation({
     await ctx.db.patch(args.sessionId, {
       agentSessionId: args.agentSessionId,
     });
+  },
+});
+
+export const archive = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { archived: true });
+  },
+});
+
+export const unarchive = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { archived: false });
+  },
+});
+
+export const remove = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    // 메시지도 함께 삭제
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+    for (const msg of messages) {
+      await ctx.db.delete(msg._id);
+    }
+    await ctx.db.delete(args.sessionId);
   },
 });
