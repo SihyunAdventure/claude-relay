@@ -3,7 +3,23 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const PATHS_KEY = "claude-relay-recent-paths";
+
+function getRecentPaths(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(PATHS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentPath(path: string) {
+  const paths = getRecentPaths().filter((p) => p !== path);
+  paths.unshift(path);
+  localStorage.setItem(PATHS_KEY, JSON.stringify(paths.slice(0, 10)));
+}
 
 export function SessionList() {
   const sessions = useQuery(api.sessions.list);
@@ -13,11 +29,17 @@ export function SessionList() {
   const [showForm, setShowForm] = useState(false);
   const [workingDir, setWorkingDir] = useState("");
   const [title, setTitle] = useState("");
+  const [recentPaths, setRecentPaths] = useState<string[]>([]);
+
+  useEffect(() => {
+    setRecentPaths(getRecentPaths());
+  }, []);
 
   const handleCreate = async () => {
     if (!workingDir.trim()) return;
     setCreating(true);
     try {
+      saveRecentPath(workingDir.trim());
       const id = await createSession({
         workingDir: workingDir.trim(),
         title: title.trim() || workingDir.trim().split("/").pop() || "세션",
@@ -49,6 +71,27 @@ export function SessionList() {
             <label className="mb-1 block text-xs text-zinc-400">
               프로젝트 경로 (절대 경로)
             </label>
+            {recentPaths.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {recentPaths.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setWorkingDir(p);
+                      setTitle(p.split("/").pop() || "");
+                    }}
+                    className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                      workingDir === p
+                        ? "border-blue-500 bg-blue-600/20 text-blue-400"
+                        : "border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                    }`}
+                  >
+                    {p.split("/").pop()}
+                  </button>
+                ))}
+              </div>
+            )}
             <input
               type="text"
               placeholder="/Users/sihyunkim/Documents/Activate/Side/bookbookbook"
@@ -56,6 +99,9 @@ export function SessionList() {
               onChange={(e) => setWorkingDir(e.target.value)}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none"
             />
+            {workingDir && recentPaths.includes(workingDir) && (
+              <p className="mt-1 text-[10px] text-zinc-600 truncate">{workingDir}</p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">
