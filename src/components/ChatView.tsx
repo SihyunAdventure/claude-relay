@@ -103,51 +103,52 @@ export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
 
       {/* Input */}
       <div className="border-t border-zinc-800 p-4">
-        {isStreaming && (
-          <div className="mx-auto mb-2 flex max-w-2xl justify-center">
+        <div className="mx-auto flex max-w-2xl gap-2">
+          {isStreaming ? (
             <button
               onClick={() => cancelStreaming({ sessionId })}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800 px-4 py-1.5 text-xs text-zinc-400 transition-colors hover:border-red-500/50 hover:text-red-400"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 py-3 text-sm text-zinc-400 transition-colors hover:border-red-500/50 hover:text-red-400"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
               </svg>
-              응답 중지
+              응답 중지 (Esc)
             </button>
-          </div>
-        )}
-        <div className="mx-auto flex max-w-2xl gap-2">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onCompositionStart={() => { isComposing.current = true; }}
-            onCompositionEnd={() => { isComposing.current = false; }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !isComposing.current) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            placeholder={isStreaming ? "추가 메시지 입력 (큐에 추가됩니다)" : "메시지를 입력하세요"}
-            rows={1}
-            className="flex-1 resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
-          />
-          <button
-            onClick={handleSubmit}
-            disabled={!input.trim() || sending}
-            className="rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-            </svg>
-          </button>
+          ) : (
+            <>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onCompositionStart={() => { isComposing.current = true; }}
+                onCompositionEnd={() => { isComposing.current = false; }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !isComposing.current) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                placeholder="메시지를 입력하세요"
+                rows={1}
+                className="flex-1 resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                onClick={handleSubmit}
+                disabled={!input.trim() || sending}
+                className="rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
