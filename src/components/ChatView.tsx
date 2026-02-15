@@ -183,11 +183,14 @@ function MessageBubble({
           {isUser ? (
             <p>{message.content}</p>
           ) : (
-            <Markdown>
-              {(message.content || (message.status === "streaming" ? "..." : ""))
-                .replace(/<tool>.*?<\/tool>\n?/g, "")
-                .trim()}
-            </Markdown>
+            <>
+              <Markdown>
+                {(message.content || (message.status === "streaming" ? "..." : ""))
+                  .replace(/<!--tool:.*?-->\n?/g, "")
+                  .trim()}
+              </Markdown>
+              <ToolCalls content={message.content} />
+            </>
           )}
         </div>
 
@@ -247,5 +250,38 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${config.color}`}>
       {config.label}
     </span>
+  );
+}
+
+function ToolCalls({ content }: { content: string }) {
+  const tools: Array<{ name: string; summary: string }> = [];
+  const toolRegex = /<!--tool:(\w+):(.*?)-->/g;
+  let m = toolRegex.exec(content);
+  while (m !== null) {
+    tools.push({ name: m[1], summary: m[2] });
+    m = toolRegex.exec(content);
+  }
+
+  if (tools.length === 0) return null;
+
+  return (
+    <details className="mt-2">
+      <summary className="cursor-pointer text-[11px] text-zinc-500 hover:text-zinc-300 select-none">
+        도구 호출 {tools.length}개
+      </summary>
+      <div className="mt-1.5 space-y-1">
+        {tools.map((tool, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2 rounded bg-zinc-900/50 px-2 py-1 text-[11px] text-zinc-400"
+          >
+            <span className="shrink-0 rounded bg-zinc-700 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
+              {tool.name}
+            </span>
+            <span className="truncate">{tool.summary}</span>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }

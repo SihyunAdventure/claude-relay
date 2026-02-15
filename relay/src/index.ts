@@ -41,8 +41,18 @@ function formatToolUse(name: string, input: unknown): string {
     }
   }
 
-  // 일반 도구는 최소한의 표시만 (접을 수 있게 마커 사용)
-  return `\n<tool>${name}</tool>\n`;
+  // 도구 호출을 마커로 감싸서 UI에서 접을 수 있게
+  const summary = (() => {
+    const inp = input as Record<string, unknown>;
+    if (name === "Bash") return inp.command ? String(inp.command).slice(0, 80) : "";
+    if (name === "Read") return inp.file_path ? String(inp.file_path) : "";
+    if (name === "Edit") return inp.file_path ? String(inp.file_path) : "";
+    if (name === "Write") return inp.file_path ? String(inp.file_path) : "";
+    if (name === "Glob") return inp.pattern ? String(inp.pattern) : "";
+    if (name === "Grep") return inp.pattern ? String(inp.pattern) : "";
+    return "";
+  })();
+  return `\n<!--tool:${name}:${summary}-->\n`;
 }
 
 async function poll() {
