@@ -40,6 +40,12 @@ async function poll() {
       status: "active",
     });
 
+    // 세션 정보에서 workingDir 가져오기
+    const session = await convex.query(api.sessions.get, {
+      sessionId: pending.sessionId,
+    });
+    const cwd = session?.workingDir || process.cwd();
+
     // Claude Agent SDK 호출
     const agentSessionId = sessionMap.get(pending.sessionId);
     const assistantMsgId = await convex.mutation(api.messages.addAssistant, {
@@ -56,7 +62,9 @@ async function poll() {
         options: {
           model: "claude-sonnet-4-5-20250929",
           ...(agentSessionId ? { resume: agentSessionId } : {}),
+          systemPrompt: { type: "preset", preset: "claude_code" },
           permissionMode: "bypassPermissions",
+          cwd,
           maxTurns: 10,
         },
       });
@@ -89,11 +97,7 @@ async function poll() {
           });
         }
 
-        if (message.type === "result" && message.subtype === "success") {
-          if ("result" in message && message.result) {
-            fullText += "\n" + message.result;
-          }
-        }
+        // result 메시지는 완료 신호로만 사용 (텍스트는 assistant에서 이미 수집)
       }
 
       // 완료

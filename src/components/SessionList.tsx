@@ -10,14 +10,21 @@ export function SessionList() {
   const createSession = useMutation(api.sessions.create);
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [workingDir, setWorkingDir] = useState("");
+  const [title, setTitle] = useState("");
 
   const handleCreate = async () => {
+    if (!workingDir.trim()) return;
     setCreating(true);
     try {
       const id = await createSession({
-        workingDir: "~",
-        title: `세션 ${(sessions?.length ?? 0) + 1}`,
+        workingDir: workingDir.trim(),
+        title: title.trim() || workingDir.trim().split("/").pop() || "세션",
       });
+      setShowForm(false);
+      setWorkingDir("");
+      setTitle("");
       router.push(`/session/${id}`);
     } finally {
       setCreating(false);
@@ -29,13 +36,48 @@ export function SessionList() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-white">Claude Relay</h1>
         <button
-          onClick={handleCreate}
-          disabled={creating}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          onClick={() => setShowForm(!showForm)}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
         >
-          {creating ? "생성 중..." : "+ 새 세션"}
+          + 새 세션
         </button>
       </div>
+
+      {showForm && (
+        <div className="space-y-3 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+          <div>
+            <label className="mb-1 block text-xs text-zinc-400">
+              프로젝트 경로 (절대 경로)
+            </label>
+            <input
+              type="text"
+              placeholder="/Users/sihyunkim/Documents/Activate/Side/bookbookbook"
+              value={workingDir}
+              onChange={(e) => setWorkingDir(e.target.value)}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-zinc-400">
+              세션 이름 (선택)
+            </label>
+            <input
+              type="text"
+              placeholder="프로젝트 폴더명이 기본값"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={handleCreate}
+            disabled={!workingDir.trim() || creating}
+            className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          >
+            {creating ? "생성 중..." : "세션 생성"}
+          </button>
+        </div>
+      )}
 
       {!sessions ? (
         <div className="py-12 text-center text-zinc-500">로딩 중...</div>
