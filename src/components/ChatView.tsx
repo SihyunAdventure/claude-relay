@@ -14,6 +14,7 @@ export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isComposing = useRef(false);
   const router = useRouter();
 
   // 새 메시지 올 때 스크롤
@@ -98,8 +99,10 @@ export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onCompositionStart={() => { isComposing.current = true; }}
+            onCompositionEnd={() => { isComposing.current = false; }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !isComposing.current) {
                 e.preventDefault();
                 handleSubmit();
               }

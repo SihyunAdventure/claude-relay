@@ -65,6 +65,7 @@ async function poll() {
           systemPrompt: { type: "preset", preset: "claude_code" },
           permissionMode: "bypassPermissions",
           cwd,
+          env: { PATH: process.env.PATH || "" },
           maxTurns: 10,
         },
       });
