@@ -41,9 +41,8 @@ function formatToolUse(name: string, input: unknown): string {
     }
   }
 
-  // 일반 도구는 간략히 표시
-  const inputStr = JSON.stringify(input, null, 2).slice(0, 300);
-  return `\n[${name}] ${inputStr}\n`;
+  // 일반 도구는 최소한의 표시만 (접을 수 있게 마커 사용)
+  return `\n<tool>${name}</tool>\n`;
 }
 
 async function poll() {

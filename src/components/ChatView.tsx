@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Markdown from "react-markdown";
 
 export function ChatView({ sessionId }: { sessionId: Id<"sessions"> }) {
   const session = useQuery(api.sessions.get, { sessionId });
@@ -178,9 +179,17 @@ function MessageBubble({
             : "bg-zinc-800 text-zinc-100"
         }`}
       >
-        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-          {message.content || (message.status === "streaming" ? "..." : "")}
-        </p>
+        <div className="prose prose-sm prose-invert max-w-none break-words text-sm leading-relaxed [&_table]:text-xs [&_pre]:bg-zinc-900 [&_pre]:p-2 [&_pre]:rounded [&_code]:text-blue-300 [&_a]:text-blue-400">
+          {isUser ? (
+            <p>{message.content}</p>
+          ) : (
+            <Markdown>
+              {(message.content || (message.status === "streaming" ? "..." : ""))
+                .replace(/<tool>.*?<\/tool>\n?/g, "")
+                .trim()}
+            </Markdown>
+          )}
+        </div>
 
         {/* 선택 옵션 버튼 */}
         {questions && (
