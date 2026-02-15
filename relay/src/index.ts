@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-const POLL_INTERVAL = 3000; // 3초마다 체크
+const POLL_INTERVAL = 3000;
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 if (!convexUrl) {
@@ -18,6 +18,37 @@ const sessionMap = new Map<string, string>();
 
 let isProcessing = false;
 
+function formatToolUse(name: string, input: unknown): string {
+  // AskUserQuestion은 질문 형태로 포맷
+  if (name === "AskUserQuestion") {
+    const q = input as {
+      questions?: Array<{
+        question: string;
+        options?: Array<{ label: string; description?: string }>;
+      }>;
+    };
+    if (q.questions) {
+      let text = "";
+      for (const question of q.questions) {
+        text += `\n**${question.question}**\n\n`;
+        if (question.options) {
+          question.options.forEach((opt, i) => {
+            text += `${i + 1}. **${opt.label}**`;
+            if (opt.description) text += ` — ${opt.description}`;
+            text += "\n";
+          });
+        }
+        text += "\n답변을 입력해주세요.\n";
+      }
+      return text;
+    }
+  }
+
+  // 일반 도구는 간략히 표시
+  const inputStr = JSON.stringify(input, null, 2).slice(0, 300);
+  return `\n[${name}] ${inputStr}\n`;
+}
+
 async function poll() {
   if (isProcessing) return;
 
@@ -28,25 +59,21 @@ async function poll() {
     isProcessing = true;
     console.log(`[relay] 메시지 수신: "${pending.content.slice(0, 50)}..."`);
 
-    // 메시지 상태를 streaming으로 변경
     await convex.mutation(api.messages.updateStatus, {
       messageId: pending._id,
       status: "streaming",
     });
 
-    // 세션 상태를 active로
     await convex.mutation(api.sessions.updateStatus, {
       sessionId: pending.sessionId,
       status: "active",
     });
 
-    // 세션 정보에서 workingDir 가져오기
     const session = await convex.query(api.sessions.get, {
       sessionId: pending.sessionId,
     });
     const cwd = session?.workingDir || process.cwd();
 
-    // Claude Agent SDK 호출
     const agentSessionId = sessionMap.get(pending.sessionId);
     const assistantMsgId = await convex.mutation(api.messages.addAssistant, {
       sessionId: pending.sessionId,
@@ -65,14 +92,13 @@ async function poll() {
           systemPrompt: { type: "preset", preset: "claude_code" },
           permissionMode: "bypassPermissions",
           cwd,
-          env: { PATH: process.env.PATH || "" },
+          env: { ...process.env } as Record<string, string>,
           maxTurns: 10,
         },
       });
 
       for await (const message of response) {
         if (message.type === "system" && message.subtype === "init") {
-          // 새 세션 ID 저장
           const newSessionId = message.session_id;
           sessionMap.set(pending.sessionId, newSessionId);
           await convex.mutation(api.sessions.setAgentSessionId, {
@@ -87,18 +113,15 @@ async function poll() {
               fullText += block.text + "\n";
             }
             if ("name" in block && block.input) {
-              fullText += `\n**[Tool: ${block.name}]**\n\`\`\`\n${JSON.stringify(block.input, null, 2).slice(0, 500)}\n\`\`\`\n`;
+              fullText += formatToolUse(block.name, block.input);
             }
           }
-          // 스트리밍 업데이트
           await convex.mutation(api.messages.updateContent, {
             messageId: assistantMsgId,
             content: fullText,
             status: "streaming",
           });
         }
-
-        // result 메시지는 완료 신호로만 사용 (텍스트는 assistant에서 이미 수집)
       }
 
       // 완료
@@ -126,7 +149,6 @@ async function poll() {
       });
     }
 
-    // 세션 상태를 idle로
     await convex.mutation(api.sessions.updateStatus, {
       sessionId: pending.sessionId,
       status: "idle",
@@ -139,10 +161,9 @@ async function poll() {
   }
 }
 
-// 시작
 console.log("[relay] Claude Code Relay 시작...");
 console.log(`[relay] Convex: ${convexUrl}`);
 console.log(`[relay] ${POLL_INTERVAL / 1000}초마다 새 메시지 확인`);
 
 setInterval(poll, POLL_INTERVAL);
-poll(); // 즉시 첫 폴링
+poll();
