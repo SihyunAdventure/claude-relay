@@ -3,7 +3,7 @@
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "claude-relay-convex-url";
+const STORAGE_KEY = "relaycode-convex-url";
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   const [convexUrl, setConvexUrl] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-white">Claude Relay</h1>
+            <h1 className="text-2xl font-bold text-white">RelayCode</h1>
             <p className="mt-2 text-sm text-zinc-400">
               맥북의 Claude Code를 모바일에서 사용하세요
             </p>
@@ -90,8 +90,8 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
               <div>
                 <p className="font-medium text-zinc-300">2. 맥북에서 실행</p>
                 <pre className="mt-1 overflow-x-auto rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-300">
-{`git clone https://github.com/SihyunAdventure/claude-relay
-cd claude-relay
+{`git clone https://github.com/SihyunAdventure/relaycode
+cd relaycode
 npm install
 npm run setup`}
                 </pre>

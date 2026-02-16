@@ -5,7 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const PATHS_KEY = "claude-relay-recent-paths";
+const PATHS_KEY = "relaycode-recent-paths";
 
 const MODEL_LABELS: Record<string, string> = {
   "claude-opus-4-6": "Opus 4.6",
@@ -65,6 +65,7 @@ export function SessionList() {
   const [newProjectPath, setNewProjectPath] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
   const [model, setModel] = useState("claude-sonnet-4-5-20250929");
+  const [permissionMode, setPermissionMode] = useState("bypassPermissions");
 
   useEffect(() => {
     setRecentPaths(getRecentPaths());
@@ -79,6 +80,7 @@ export function SessionList() {
         workingDir: workingDir.trim(),
         title: title.trim() || workingDir.trim().split("/").pop() || "세션",
         model,
+        permissionMode,
       });
       setShowForm(false);
       setWorkingDir("");
@@ -92,7 +94,7 @@ export function SessionList() {
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Claude Relay</h1>
+        <h1 className="text-xl font-bold text-white">RelayCode</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
@@ -302,6 +304,10 @@ export function SessionList() {
             <label className="mb-1 block text-xs text-zinc-400">모델</label>
             <ModelSelector value={model} onChange={setModel} />
           </div>
+          <div>
+            <label className="mb-1 block text-xs text-zinc-400">권한 모드</label>
+            <PermissionModeSelector value={permissionMode} onChange={setPermissionMode} />
+          </div>
           <button
             onClick={handleCreate}
             disabled={!workingDir.trim() || creating}
@@ -476,11 +482,39 @@ function ModelSelector({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
+const PERMISSION_MODES = [
+  { id: "bypassPermissions", label: "자동 승인", desc: "모든 작업 자동 실행" },
+  { id: "default", label: "승인 필요", desc: "파일 수정/실행 시 확인" },
+  { id: "plan", label: "계획 모드", desc: "계획 수립 후 승인" },
+];
+
+function PermissionModeSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex gap-1.5">
+      {PERMISSION_MODES.map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          onClick={() => onChange(m.id)}
+          title={m.desc}
+          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+            value === m.id
+              ? "border-blue-500 bg-blue-600/20 text-blue-400"
+              : "border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+          }`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ResetButton() {
   return (
     <button
       onClick={() => {
-        localStorage.removeItem("claude-relay-convex-url");
+        localStorage.removeItem("relaycode-convex-url");
         window.location.reload();
       }}
       className="w-full pt-4 text-center text-xs text-zinc-600 hover:text-zinc-400"

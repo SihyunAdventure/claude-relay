@@ -5,14 +5,14 @@ import { startRelay } from "./index.js";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const ENV_FILE = resolve(ROOT, ".env.local");
-const WEB_URL = "https://claude-relay-sh.vercel.app";
+const WEB_URL = "https://relaycode.vercel.app";
 
 function log(msg: string) {
   console.log(`  ${msg}`);
 }
 
 function banner() {
-  console.log("\n\x1b[1m🚀 Claude Relay\x1b[0m");
+  console.log("\n\x1b[1m🚀 RelayCode\x1b[0m");
   console.log("  모바일에서 맥북의 Claude Code를 사용하세요\n");
 }
 

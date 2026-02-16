@@ -1,4 +1,4 @@
-const CACHE_NAME = 'claude-relay-v1';
+const CACHE_NAME = 'relaycode-v1';
 const urlsToCache = [
   '/',
   '/offline',

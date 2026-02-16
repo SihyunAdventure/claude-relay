@@ -1,4 +1,4 @@
-# Claude Relay
+# RelayCode
 
 모바일에서 맥북의 Claude Code를 사용할 수 있게 해주는 오픈소스 릴레이.
 
@@ -15,8 +15,8 @@
 ### 2. 맥북에서 실행
 
 ```bash
-git clone https://github.com/SihyunAdventure/claude-relay
-cd claude-relay
+git clone https://github.com/SihyunAdventure/relaycode
+cd relaycode
 npm install
 npm run setup
 ```
@@ -25,7 +25,7 @@ npm run setup
 
 ### 3. 모바일에서 접속
 
-https://claude-relay-sh.vercel.app 접속 → 터미널에 표시된 연결 URL 입력 → 끝!
+https://relaycode.vercel.app 접속 → 터미널에 표시된 연결 URL 입력 → 끝!
 
 ## 구조
 

@@ -1,6 +1,6 @@
 {
-  "name": "Claude Relay",
-  "short_name": "Relay",
+  "name": "RelayCode",
+  "short_name": "RelayCode",
   "description": "모바일에서 맥북의 Claude Code에 접속",
   "start_url": "/",
   "display": "standalone",

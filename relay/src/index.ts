@@ -25,11 +25,7 @@ function formatToolUse(name: string, input: unknown): string {
     };
     if (q.questions) {
       pendingQuestionData = JSON.stringify(q.questions);
-      let text = "";
-      for (const question of q.questions) {
-        text += `\n${question.question}\n`;
-      }
-      return text;
+      return ""; // 질문은 위자드 UI로만 표시
     }
   }
 
@@ -103,13 +99,14 @@ async function poll(convex: ConvexHttpClient) {
       pendingQuestionData = null;
 
       const model = session?.model || "claude-sonnet-4-5-20250929";
+      const permissionMode = (session?.permissionMode || "bypassPermissions") as "bypassPermissions" | "default" | "plan";
       const response = query({
         prompt: pending.content,
         options: {
           model,
           ...(agentSessionId ? { resume: agentSessionId } : {}),
           systemPrompt: { type: "preset", preset: "claude_code" },
-          permissionMode: "bypassPermissions",
+          permissionMode,
           cwd,
           env: { ...process.env } as Record<string, string>,
           maxTurns: 10,
@@ -139,12 +136,23 @@ async function poll(convex: ConvexHttpClient) {
         }
 
         if (message.type === "assistant" && message.message?.content) {
-          for (const block of message.message.content) {
+          const blocks = message.message.content;
+          // AskUserQuestion이 포함되면 텍스트를 첫 문단만 유지 (질문은 위자드로)
+          const hasAskQ = blocks.some(
+            (b: Record<string, unknown>) => "name" in b && b.name === "AskUserQuestion"
+          );
+
+          for (const block of blocks) {
             if ("text" in block && block.text) {
-              fullText += block.text + "\n";
+              if (hasAskQ) {
+                const firstPara = (block.text as string).split("\n\n")[0].trim();
+                if (firstPara) fullText += firstPara + "\n";
+              } else {
+                fullText += (block.text as string) + "\n";
+              }
             }
             if ("name" in block && block.input) {
-              fullText += formatToolUse(block.name, block.input);
+              fullText += formatToolUse(block.name as string, block.input);
             }
           }
           await convex.mutation(api.messages.updateContent, {

@@ -59,6 +59,7 @@ export const create = mutation({
     workingDir: v.string(),
     title: v.optional(v.string()),
     model: v.optional(v.string()),
+    permissionMode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -67,6 +68,7 @@ export const create = mutation({
       workingDir: args.workingDir,
       title: args.title,
       model: args.model,
+      permissionMode: args.permissionMode,
       createdAt: now,
       lastActiveAt: now,
     });
@@ -109,6 +111,16 @@ export const updateModel = mutation({
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.sessionId, { model: args.model });
+  },
+});
+
+export const updatePermissionMode = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    permissionMode: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { permissionMode: args.permissionMode });
   },
 });
 

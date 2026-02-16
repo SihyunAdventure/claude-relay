@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Claude Relay",
+  title: "RelayCode",
   description: "모바일에서 맥북의 Claude Code에 접속",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Claude Relay",
+    title: "RelayCode",
   },
 };
 
